@@ -6,13 +6,13 @@ const func: DeployFunction = async function (hre) {
 
   const { owner } = await viem.getNamedClients()
 
-  const ethOwnedResolver = await viem.deploy('OwnedResolver', [])
 
   if (!ethOwnedResolver.newlyDeployed) return
 
   const registry = await viem.getContract('ENSRegistry')
   const registrar = await viem.getContract('BaseRegistrarImplementation')
 
+  const ethOwnedResolver = await viem.deploy('OwnedResolver', [])
   const setResolverHash = await registrar.write.setResolver(
     [ethOwnedResolver.address],
     { account: owner.account },

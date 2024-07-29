@@ -10,7 +10,7 @@ const func: DeployFunction = async function (hre) {
   const dnssec = await viem.getContract('DNSSECImpl')
   const resolver = await viem.getContract('OffchainDNSResolver')
   const oldregistrar = await viem.getContractOrNull('DNSRegistrar')
-  const root = await viem.getContract('Root')
+  const root = await viem.getContractAt('Root', "0xaB528d626EC275E3faD363fF1393A41F581c5897")
 
   const publicSuffixList = await viem.getContract('SimplePublicSuffixList')
 
@@ -42,7 +42,7 @@ func.dependencies = [
   'registry',
   'dnssec-oracle',
   'OffchainDNSResolver',
-  'Root',
+  'root',
   'setupRoot',
 ]
 

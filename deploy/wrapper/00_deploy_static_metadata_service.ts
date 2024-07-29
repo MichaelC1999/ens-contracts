@@ -1,6 +1,7 @@
 import type { DeployFunction } from 'hardhat-deploy/types.js'
 
 const func: DeployFunction = async function (hre) {
+
   const { network, viem } = hre
 
   let metadataHost =

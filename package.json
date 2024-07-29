@@ -2,7 +2,6 @@
   "name": "@ensdomains/ens-contracts",
   "version": "1.0.0",
   "description": "ENS contracts",
-  "type": "module",
   "scripts": {
     "compile": "NODE_OPTIONS=\"--experimental-loader ts-node/esm/transpile-only\" hardhat compile",
     "test": "NODE_OPTIONS=\"--experimental-loader ts-node/esm/transpile-only\" hardhat test",
@@ -14,9 +13,7 @@
     "format": "prettier --write .",
     "prepublishOnly": "bun run build",
     "pub": "npm publish --access public",
-    "prepare": "husky install",
-    "wikiCheck": "bun ./scripts/wikiCheck.ts",
-    "postinstall": "bunx patch-package"
+    "wikiCheck": "bun ./scripts/wikiCheck.ts"
   },
   "files": [
     "build",
@@ -28,7 +25,6 @@
   "main": "index.js",
   "devDependencies": {
     "@ensdomains/dnsprovejs": "^0.5.1",
-    "@ensdomains/hardhat-chai-matchers-viem": "^0.0.6",
     "@nomicfoundation/hardhat-toolbox-viem": "^3.0.0",
     "@types/mocha": "^9.1.1",
     "@types/node": "^18.0.0",

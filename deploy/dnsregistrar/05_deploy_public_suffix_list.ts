@@ -7,6 +7,9 @@ const func: DeployFunction = async function (hre) {
 
   const { deployer, owner } = await viem.getNamedClients()
 
+  // const dns = await viem.getContract('DNSRegistrar')
+  // console.log(await dns.read.suffixes())
+
   await viem.deploy('SimplePublicSuffixList', [])
 
   const psl = await viem.getContract('SimplePublicSuffixList')
@@ -35,22 +38,22 @@ const func: DeployFunction = async function (hre) {
   const transactionHashes: Hash[] = []
   console.log('Starting suffix transactions')
 
-  for (let i = 0; i < suffixes.length; i += 100) {
-    const batch = suffixes
-      .slice(i, i + 100)
-      .map((suffix) => dnsEncodeName(suffix))
-    const hash = await psl.write.addPublicSuffixes([batch], {
-      account: owner.account,
-    })
-    console.log(`Setting suffixes (tx: ${hash})...`)
-    transactionHashes.push(hash)
-  }
-  console.log(
-    `Waiting on ${transactionHashes.length} suffix-setting transactions to complete...`,
-  )
-  await Promise.all(
-    transactionHashes.map((hash) => viem.waitForTransactionSuccess(hash)),
-  )
+  // for (let i = 0; i < suffixes.length; i += 100) {
+  //   const batch = suffixes
+  //     .slice(i, i + 100)
+  //     .map((suffix) => dnsEncodeName(suffix))
+  //   const hash = await psl.write.addPublicSuffixes([batch], {
+  //     account: owner.account,
+  //   })
+  //   console.log(`Setting suffixes (tx: ${hash})...`)
+  //   transactionHashes.push(hash)
+  // }
+  // console.log(
+  //   `Waiting on ${transactionHashes.length} suffix-setting transactions to complete...`,
+  // )
+  // await Promise.all(
+  //   transactionHashes.map((hash) => viem.waitForTransactionSuccess(hash)),
+  // )
 }
 
 func.tags = ['SimplePublicSuffixList']

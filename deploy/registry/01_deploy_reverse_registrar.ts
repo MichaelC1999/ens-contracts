@@ -23,11 +23,6 @@ const func: DeployFunction = async function (hre) {
     await viem.waitForTransactionSuccess(hash)
   }
 
-  // Only attempt to make controller etc changes directly on testnets
-  if (network.name === 'mainnet') return
-
-  const root = await viem.getContract('Root')
-
   const setReverseOwnerHash = await root.write.setSubnodeOwner(
     [labelhash('reverse'), owner.address],
     { account: owner.account },
