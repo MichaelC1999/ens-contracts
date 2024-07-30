@@ -22,26 +22,9 @@ const func: DeployFunction = async function () {
   console.log(registry.address)
 
   const regOwner = await registry.read.owner([zeroHash])
-  switch (regOwner) {
-    case deployer.address:
-      const hash = await registry.write.setOwner([zeroHash, owner.address], {
-        account: deployer.account,
-      })
-      console.log(
-        `Setting final owner of root node on registry (tx:${hash})...`,
-      )
-      await viem.waitForTransactionSuccess(hash)
-      break
-    case owner.address:
-      break
-    default:
-      console.log(
-        `WARNING: ENS registry root is owned by ${regOwner}; cannot transfer to owner`,
-      )
-  }
-
-
-
+  const hash = await registry.write.setOwner([zeroHash, owner.address], {
+    account: deployer.account,
+  })
 
   console.log('deploy root')
   const root = await viem.deployContract('Root', [registry.address])
@@ -49,43 +32,24 @@ const func: DeployFunction = async function () {
   console.log('ROOT: ', root.address)
 
 
-  const setOwnerHash = await registry.write.setOwner([zeroHash, root.address])
-  console.log(
-    `Setting owner of root node to root contract (tx: ${setOwnerHash})...`,
-  )
-  await viem.waitForTransactionSuccess(setOwnerHash)
+  await registry.write.setOwner([zeroHash, root.address])
 
   const rootOwner = await root.read.owner()
 
   console.log('ROOT OWNER: ', rootOwner)
 
-  switch (rootOwner) {
-    case deployer.address:
-      const transferOwnershipHash = await root.write.transferOwnership([
-        owner.address,
-      ])
-      console.log(
-        `Transferring root ownership to final owner (tx: ${transferOwnershipHash})...`,
-      )
-      await viem.waitForTransactionSuccess(transferOwnershipHash)
-    case owner.address:
-      const ownerIsRootController = await root.read.controllers([owner.address])
-      if (!ownerIsRootController) {
-        const setControllerHash = await root.write.setController(
-          [owner.address, true],
-          { account: owner.account },
-        )
-        console.log(
-          `Setting final owner as controller on root contract (tx: ${setControllerHash})...`,
-        )
-        await viem.waitForTransactionSuccess(setControllerHash)
-      }
-      break
-    default:
-      console.log(
-        `WARNING: Root is owned by ${rootOwner}; cannot transfer to owner account`,
-      )
+  const ownerIsRootController = await root.read.controllers([owner.address])
+  if (!ownerIsRootController) {
+    const setControllerHash = await root.write.setController(
+      [owner.address, true],
+      { account: owner.account },
+    )
+    console.log(
+      `Setting final owner as controller on root contract (tx: ${setControllerHash})...`,
+    )
+    await viem.waitForTransactionSuccess(setControllerHash)
   }
+
 
   const registrar = await viem.deployContract('BaseRegistrarImplementation', [
     registry.address,
@@ -228,9 +192,7 @@ const func: DeployFunction = async function () {
   console.log(await registry.read.owner([namehash('newname.registry')]),
     await ownedResolver.read.name([namehash('newname.registry')]),
     await ownedResolver.read.text([namehash('newname.registry'), "MAIN"]),
-    // await registry.read.owner([namehash('registry.eth')]),
-    await registrar.read.ownerOf([toLabelId('newname')]),
-    await nameWrapper.read.owner())
+    await registrar.read.ownerOf([toLabelId('newname')]))
 
   const expiry = await registrar.read.nameExpires([toLabelId('newname')]);
 
@@ -240,20 +202,26 @@ const func: DeployFunction = async function () {
   //   ownedResolver.address
   // ])
 
+  console.log(namehash("registry"))
+
+  console.log(await registry.read.isApprovedForAll(["0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266", "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"]))
+  await registry.write.setApprovalForAll(["0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266", true])
+  console.log(await registry.read.isApprovedForAll(["0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266", "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"]))
+
   await nameWrapper.write.registerAndWrapETH2LD(["public",
     "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
     86400n,
     ownedResolver.address,
     0])
 
+  console.log(await registry.read.owner([namehash('public.registry')]), nameWrapper.address)
   // await nameWrapper.write.wrapETH2LD(
   //   ["newname", // "myname.eth" but only the label
   //     "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266", // The address you want to own the wrapped name
   //     0, // The owner-controlled fuse bits OR'd together, that you want to burn
   //     ownedResolver.address] // The address of the resolver you want to use]
   // )
-  console.log(2)
-  await nameWrapper.write.setSubnodeOwner([namehash('public.registry'), "chaser", "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266", 327680, expiry])
+  await nameWrapper.write.setSubnodeOwner([namehash('public.registry'), "chaser", "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266", 0, expiry])
 
   console.log(await registry.read.owner([namehash('chaser.public.registry')]))
 
