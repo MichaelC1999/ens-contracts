@@ -2,7 +2,7 @@ import type { DeployFunction } from 'hardhat-deploy/types.js'
 import { labelhash, namehash, zeroAddress, zeroHash } from 'viem'
 import hre from 'hardhat'
 import { getInterfaceId } from '../test/fixtures/createInterfaceId'
-import { toLabelId } from '../test/fixtures/utils'
+import { toLabelId, toTokenId } from '../test/fixtures/utils'
 import { dnsEncodeName } from '../test/fixtures/dnsEncodeName'
 
 
@@ -10,10 +10,9 @@ import { dnsEncodeName } from '../test/fixtures/dnsEncodeName'
 const func: DeployFunction = async function () {
   const { deployments, network, viem } = hre
   const { run } = deployments
-
-  const { deployer, owner } = await viem.getNamedClients()
-  console.log(deployer.address, owner.address)
-  console.log('ADDR: ', process.env.DEPLOYER_KEY, process.env.OWNER_KEY)
+  // const { deployer, owner } = 
+  // console.log(deployer.address, userAddress)
+  // console.log('ADDR: ', process.env.DEPLOYER_KEY, process.env.OWNER_KEY)
 
   const registry = await viem.deployContract('ENSRegistry', [], {
     artifact: await deployments.getArtifact('ENSRegistry'),
@@ -21,9 +20,10 @@ const func: DeployFunction = async function () {
 
   console.log(registry.address)
 
-  const regOwner = await registry.read.owner([zeroHash])
-  const hash = await registry.write.setOwner([zeroHash, owner.address], {
-    account: deployer.account,
+  const userAddress = await registry.read.owner([zeroHash])
+  console.log(userAddress)
+  const hash = await registry.write.setOwner([zeroHash, userAddress], {
+    account: userAddress,
   })
 
   console.log('deploy root')
@@ -38,11 +38,11 @@ const func: DeployFunction = async function () {
 
   console.log('ROOT OWNER: ', rootOwner)
 
-  const ownerIsRootController = await root.read.controllers([owner.address])
+  const ownerIsRootController = await root.read.controllers([userAddress])
   if (!ownerIsRootController) {
     const setControllerHash = await root.write.setController(
-      [owner.address, true],
-      { account: owner.account },
+      [userAddress, true],
+      { account: userAddress },
     )
     console.log(
       `Setting final owner as controller on root contract (tx: ${setControllerHash})...`,
@@ -59,53 +59,35 @@ const func: DeployFunction = async function () {
   console.log('Running base registrar setup')
 
   const transferOwnershipHash = await registrar.write.transferOwnership(
-    [owner.address],
-    { account: deployer.account },
+    [userAddress],
+    { account: userAddress },
   )
   console.log(
     `Transferring ownership of registrar to owner (tx: ${transferOwnershipHash})...`,
   )
   await viem.waitForTransactionSuccess(transferOwnershipHash)
 
+
+  // THIS IS WHERE THE SUFFIX IS REGISTERED WITH THE PROTOCOL, WHERE IT WOULD BE RECOGINIZED AS LEGITIMATE
   const setSubnodeOwnerHash = await root.write.setSubnodeOwner(
     [labelhash('registry'), registrar.address],
-    { account: owner.account },
+    { account: userAddress },
   )
   console.log(
     `Setting owner of eth node to registrar on root (tx: ${setSubnodeOwnerHash})...`,
   )
   await viem.waitForTransactionSuccess(setSubnodeOwnerHash)
 
-  let oracleAddress: Address = '0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419'
-
-  if (network.name !== 'mainnet') {
-    const dummyOracle = await viem.deployContract('DummyOracle', [160000000000n])
-    oracleAddress = dummyOracle.address
-  }
-
-  const priceOracle = await viem.deployContract('ExponentialPremiumPriceOracle', [
-    oracleAddress,
-    [0n, 0n, 20294266869609n, 5073566717402n, 158548959919n],
-    100000000000000000000000000n,
-    21n,
-  ])
-
   const reverseRegistrar = await viem.deployContract('ReverseRegistrar', [
     registry.address,
   ])
 
 
-  if (owner.address !== deployer.address) {
-    const hash = await reverseRegistrar.write.transferOwnership([owner.address])
-    console.log(
-      `Transferring ownership of ReverseRegistrar to ${owner.address} (tx: ${hash})...`,
-    )
-    await viem.waitForTransactionSuccess(hash)
-  }
+
 
   const setReverseOwnerHash = await root.write.setSubnodeOwner(
-    [labelhash('reverse'), owner.address],
-    { account: owner.account },
+    [labelhash('reverse'), userAddress],
+    { account: userAddress },
   )
   console.log(
     `Setting owner of .reverse to owner on root (tx: ${setReverseOwnerHash})...`,
@@ -114,7 +96,7 @@ const func: DeployFunction = async function () {
 
   const setAddrOwnerHash = await registry.write.setSubnodeOwner(
     [namehash('reverse'), labelhash('addr'), reverseRegistrar.address],
-    { account: owner.account },
+    { account: userAddress },
   )
   console.log(
     `Setting owner of .addr.reverse to ReverseRegistrar on registry (tx: ${setAddrOwnerHash})...`,
@@ -140,20 +122,12 @@ const func: DeployFunction = async function () {
     metadata.address,
   ])
 
-  await nameWrapper.write.setController(["0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266", true])
-
-  if (owner.address !== deployer.address) {
-    const hash = await nameWrapper.write.transferOwnership([owner.address])
-    console.log(
-      `Transferring ownership of NameWrapper to ${owner.address} (tx: ${hash})...`,
-    )
-    await viem.waitForTransactionSuccess(hash)
-  }
+  await nameWrapper.write.setController([userAddress, true])
 
   // Only attempt to make controller etc changes directly on testnets
 
   await registrar.write.addController([
-    "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+    userAddress,
   ])
 
   await registrar.write.addController([
@@ -166,7 +140,7 @@ const func: DeployFunction = async function () {
   const ownedResolver = await viem.deployContract('OwnedResolver', [])
   const setResolverHash = await registrar.write.setResolver(
     [ownedResolver.address],
-    { account: owner.account },
+    { account: userAddress },
   )
   await viem.waitForTransactionSuccess(setResolverHash)
 
@@ -183,7 +157,7 @@ const func: DeployFunction = async function () {
   )
   await viem.waitForTransactionSuccess(setInterfaceHash)
 
-  const tx = await registrar.write.register([toLabelId('newname'), "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266", 86400n])
+  const tx = await registrar.write.register([toLabelId('newname'), userAddress, 86400n])
 
   await ownedResolver.write.setName([namehash('newname.registry'), "CUSTOM NAME"])
   await ownedResolver.write.setText([namehash('newname.registry'), "MAIN", "MICHAEL MICHAEL MICHAEL MICHAEL MICHAEL MICHAEL MICHAEL MICHAEL MICHAEL MICHAEL "])
@@ -198,18 +172,18 @@ const func: DeployFunction = async function () {
 
   // await nameWrapper.write.wrap([
   //   dnsEncodeName('newname.registry'),
-  //   "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+  //   userAddress,
   //   ownedResolver.address
   // ])
 
   console.log(namehash("registry"))
 
-  console.log(await registry.read.isApprovedForAll(["0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266", "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"]))
-  await registry.write.setApprovalForAll(["0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266", true])
-  console.log(await registry.read.isApprovedForAll(["0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266", "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"]))
+  console.log(await registry.read.isApprovedForAll([userAddress, userAddress]))
+  await registry.write.setApprovalForAll([userAddress, true])
+  console.log(await registry.read.isApprovedForAll([userAddress, userAddress]))
 
   await nameWrapper.write.registerAndWrapETH2LD(["public",
-    "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+    userAddress,
     86400n,
     ownedResolver.address,
     0])
@@ -217,13 +191,19 @@ const func: DeployFunction = async function () {
   console.log(await registry.read.owner([namehash('public.registry')]), nameWrapper.address)
   // await nameWrapper.write.wrapETH2LD(
   //   ["newname", // "myname.eth" but only the label
-  //     "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266", // The address you want to own the wrapped name
+  //     userAddress, // The address you want to own the wrapped name
   //     0, // The owner-controlled fuse bits OR'd together, that you want to burn
   //     ownedResolver.address] // The address of the resolver you want to use]
   // )
-  await nameWrapper.write.setSubnodeOwner([namehash('public.registry'), "chaser", "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266", 0, expiry])
-
   console.log(await registry.read.owner([namehash('chaser.public.registry')]))
+
+  const tx2 = await registrar.write.register([toLabelId('chaser.public'), userAddress, 86400n])
+  console.log('Check')
+  await nameWrapper.write.setSubnodeOwner([namehash('public.registry'), "chaser", userAddress, 0, expiry])
+
+
+
+  // console.log(await nameWrapper.read.owner([namehash('chaser.public.registry')]))
 
 }
 

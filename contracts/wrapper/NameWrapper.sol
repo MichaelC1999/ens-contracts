@@ -891,10 +891,6 @@ contract NameWrapper is
         // transfer the ens record back to the new owner (this contract)
         registrar.reclaim(uint256(labelhash), address(this));
 
-        uint64 expiry = uint64(registrar.nameExpires(tokenId)) + GRACE_PERIOD;
-
-        _wrapETH2LD(label, owner, ownerControlledFuses, expiry, resolver);
-
         return IERC721Receiver(to).onERC721Received.selector;
     }
 
